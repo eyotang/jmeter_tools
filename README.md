@@ -2,7 +2,7 @@
 
 Jmeter tools for log analysis, upload to mongodb, etc.
 
-```python aggregate.py```
+```# python aggregate.py```
 
 ![demo picture](https://github.com/eyotang/jmeter_tools/raw/master/demo.png)
 
