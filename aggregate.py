@@ -6,7 +6,7 @@ import prettytable
 from mongoengine import connect
 from mongoengine import Document, StringField, DictField
 
-db = "jmeter"
+db = "alex"
 alias = db
 host = "10.23.102.140"
 
@@ -15,7 +15,7 @@ if sys.stdout.encoding != 'UTF-8':
 if sys.stderr.encoding != 'UTF-8':
     sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
-class JmeterLog(Document):
+class JmeterLogs(Document):
     jobname = StringField(required=True)
     metrics = DictField()
     meta = {'db_alias': alias}
@@ -65,7 +65,7 @@ with open('res.jtl', 'r', encoding='utf-8') as csvfile:
             setTimeStatistic(metrics[label], int(row["timeStamp"]), int(row["elapsed"]), row["responseCode"])
 
 connect(db, alias=alias, host=host)
-jmeterLog = JmeterLog(jobname="eyotang_load_test", metrics=metrics)
+jmeterLog = JmeterLogs(jobname="eyotang_load_test", metrics=metrics)
 jmeterLog.save()
 
 data = prettytable.PrettyTable(["Label", "Number", "Average", "Median", "90%Line", "95%Line", "99%Line", "Min", "Max", "Error%", "QPS", "KB/sec"])
