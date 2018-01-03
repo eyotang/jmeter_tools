@@ -4,7 +4,7 @@ import csv
 import sys, codecs
 import prettytable
 from mongoengine import connect
-from mongoengine import Document, StringField, DictField
+from mongoengine import Document, StringField, LongField, DictField, ListField
 
 db = "alex"
 alias = db
@@ -17,7 +17,10 @@ if sys.stderr.encoding != 'UTF-8':
 
 class JmeterLogs(Document):
     jobname = StringField(required=True)
-    metrics = DictField()
+    state   = StringField(required=True)
+    metricslist = ListField(DictField(required=True))
+    startts = LongField(required=True)
+    endts   = LongField(required=True)
     meta = {'db_alias': alias}
 
 def setTimeStatistic(metrics, timeStamp, elapsed, code):
@@ -27,10 +30,10 @@ def setTimeStatistic(metrics, timeStamp, elapsed, code):
 
     timeIndex = str(int((timeStamp+999)/1000))
     if not timeMetrics.get(timeIndex):
-        timeMetrics[timeIndex] = {"elapsed": [[0, 0], [0, 0]], "tps": {}}
+        timeMetrics[timeIndex] = {"elapsed": [{"totalelapsed": 0, "num": 0}, {"totalelapsed": 0, "num": 0}], "tps": {}}
     elapsedIndex = int((timeStamp%1000)/500)
-    timeMetrics[timeIndex]["elapsed"][elapsedIndex][1] += 1 # 500毫米内请求个数
-    timeMetrics[timeIndex]["elapsed"][elapsedIndex][0] += elapsed # 累加500毫秒费时
+    timeMetrics[timeIndex]["elapsed"][elapsedIndex]["num"] += 1 # 500毫米内请求个数
+    timeMetrics[timeIndex]["elapsed"][elapsedIndex]["totalelapsed"] += elapsed # 累加500毫秒费时
     if not timeMetrics[timeIndex]["tps"].get(code):
         timeMetrics[timeIndex]["tps"][code] = 0
     timeMetrics[timeIndex]["tps"][code] += 1
@@ -64,21 +67,53 @@ with open('res.jtl', 'r', encoding='utf-8') as csvfile:
             aggregate(metrics, "Total", row)
             setTimeStatistic(metrics[label], int(row["timeStamp"]), int(row["elapsed"]), row["responseCode"])
 
-connect(db, alias=alias, host=host)
-jmeterLog = JmeterLogs(jobname="eyotang_load_test", metrics=metrics)
-jmeterLog.save()
-
+metrics_list = []
 data = prettytable.PrettyTable(["Label", "Number", "Average", "Median", "90%Line", "95%Line", "99%Line", "Min", "Max", "Error%", "QPS", "KB/sec"])
-for key, value in metrics.items():
+od = sorted(metrics.items())
+for (key, value) in od:
     success = value["success"]
     elapsed_list = sorted(value["elapsed"])
     total = len(elapsed_list)
     elapsedtime = float(value["stopTime"])/1000 - float(value["startTime"])/1000
     average = float("%.2f" %(float(sum(elapsed_list))/float(total)))
     errRate = float("%.2f" %(float(total-success)*100.0/float(total)))
+    p50 = elapsed_list[int(total/2-1)]
+    p90 = elapsed_list[int(total*0.9)-1]
+    p95 = elapsed_list[int(total*0.95)-1]
+    p99 = elapsed_list[int(total*0.99)-1]
+    mini = elapsed_list[0]
+    maxi = elapsed_list[-1]
     qps = float("%.1f" %(float(total)/float(elapsedtime)))
-    kbs = float("%.1f" %(float(value["bytes"])/(1024*float(elapsedtime))))
-    data.add_row([key, total, average, elapsed_list[int(total/2-1)], elapsed_list[int(total*0.9)-1], elapsed_list[int(total*0.95)-1], elapsed_list[int(total*0.99)-1], elapsed_list[0], elapsed_list[-1], errRate, qps, kbs])
+    total_bytes = value["bytes"]
+    kbs = float("%.1f" %(float(total_bytes)/(1024*float(elapsedtime))))
+    data.add_row([key, total, average, p50, p90, p95, p99, mini, maxi, errRate, qps, kbs])
 
-print(data.get_string(sortby="Label", reversesort=True))
+    m = {
+        "label": key,
+        "total": total,
+        "latencies": {
+            "average": average,
+            "p50": p50,
+            "p90": p90,
+            "p95": p95,
+            "p99": p99,
+            "min": mini,
+            "max": maxi
+        },
+        "errorrate": errRate,
+        "qps": qps,
+        "kbs": kbs,
+        "starttime": value["startTime"],
+        "stoptime": value["stopTime"],
+        "timemetrics": value.get("timeMetrics")
+    }
+    metrics_list.append(m)
+
+#print(data.get_string(sortby="Label", reversesort=True))
+print(data)
+
+
+connect(db, alias=alias, host=host)
+jmeterLog = JmeterLogs(jobname="eyotang_load_test", state="Finished", metricslist=metrics_list, startts=metrics["Total"]["startTime"]/1000, endts=metrics["Total"]["stopTime"]/1000)
+jmeterLog.save()
 
