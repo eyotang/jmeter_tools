@@ -2,13 +2,17 @@
 
 Jmeter tools for log analysis, upload to mongodb, etc.
 
-```# python aggregate.py```
+```# python3 aggregate.py```
 
 ![demo picture](https://github.com/eyotang/jmeter_tools/raw/master/demo.png)
 
 ## Prerequisite
-1. prettytable is required to print the data as table.
+1. python version >= 3.4.
 
-   ```# pip install prettytable```
+2. prettytable is required to print the data as table.
 
-2. mongoengine is required to connect and store data in mongodb.
+   ```# pip3 install prettytable```
+
+3. mongoengine is required to connect and store data in mongodb.
+
+   ```# pip3 install mongoengine```

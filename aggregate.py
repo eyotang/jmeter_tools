@@ -10,6 +10,8 @@ db = "alex"
 alias = db
 host = "10.23.102.140"
 
+useless = ['SIGN', 'OrderNo']
+
 if sys.stdout.encoding != 'UTF-8':
     sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
 if sys.stderr.encoding != 'UTF-8':
@@ -56,7 +58,6 @@ def aggregate(metrics, label, row):
     m["bytes"] += int(row["bytes"])
 
 
-useless = ['SIGN', 'OrderNo']
 metrics = {}
 with open('res.jtl', 'r', encoding='utf-8') as csvfile:
     reader = csv.DictReader(csvfile)
