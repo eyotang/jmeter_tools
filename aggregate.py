@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import csv
+import csv, json
 import sys, codecs
 import prettytable
 from mongoengine import connect
