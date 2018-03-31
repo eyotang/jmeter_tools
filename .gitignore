@@ -1,3 +1,6 @@
 *.jtl
 *.jmx
 __pycache__
+*.iml
+.idea
+aggregate
